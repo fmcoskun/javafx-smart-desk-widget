@@ -1,0 +1,736 @@
+:root {
+  --bg: #e8e8e8;
+  --text: #2c3036;
+  --text-muted: #757d8a;
+  --shadow-light: rgba(255, 255, 255, 0.85);
+  --shadow-dark: rgba(0, 0, 0, 0.16);
+  --shadow-dark-deep: rgba(0, 0, 0, 0.24);
+  --accent-green: #00b33c;
+  --accent-green-glow: rgba(0, 179, 60, 0.45);
+  --accent-red: #e63946;
+  --card-radius: 18px;
+}
+
+* {
+  box-sizing: border-box;
+  user-select: none;
+}
+
+/* JavaFX WebView does not let buttons inherit the page font by default */
+button {
+  font-family: inherit;
+}
+
+body {
+  margin: 0;
+  padding: 0;
+  background: transparent;
+  overflow: hidden;
+  font-family: 'Roboto', sans-serif;
+  color: var(--text);
+}
+
+/* Two-column shell. It is always 680px wide and left-aligned: the Java window
+   (360px collapsed / 680px expanded) simply reveals or clips the right column,
+   so the main panel never moves while the width animates. Keep these widths in
+   sync with JavaBridge.COLLAPSED_WIDTH / EXPANDED_WIDTH. */
+.app-shell {
+  display: flex;
+  align-items: stretch;
+  width: 680px;
+}
+
+/* Each column keeps some transparent padding so the card shadow is not clipped */
+.main-column {
+  flex: 0 0 360px;
+  min-width: 0; /* never let wide content push the column past 360px */
+  padding: 14px 12px 24px;
+}
+
+.detail-column {
+  flex: 0 0 320px;
+  display: flex;
+  padding: 14px 12px 24px 0;
+}
+
+/* Near the right screen edge the window grows to the left (JavaBridge.expandWindow):
+   detail panel on the left, main panel on the right */
+body.detail-left .app-shell {
+  flex-direction: row-reverse;
+}
+
+body.detail-left .detail-column {
+  padding: 14px 0 24px 12px;
+}
+
+/* Outer Desktop Window Simulator (Electron Frameless Shell) */
+.widget-window {
+  background: var(--bg);
+  border-radius: 28px;
+  padding: 14px 14px 18px;
+  /* Original neumorphic shadow - white glow looks like a halo on dark desktops
+  box-shadow:
+    18px 18px 35px rgba(0, 0, 0, 0.22),
+    -14px -14px 28px rgba(255, 255, 255, 0.9);
+  */
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.3);
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  transition: all 0.3s ease;
+}
+
+/* Window Bar - dragging is handled on the Java side (App.java) for any
+   element inside [data-drag-region] that is not inside [data-no-drag] */
+.window-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 4px 2px 10px;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+  cursor: grab;
+}
+
+.window-header:active {
+  cursor: grabbing;
+}
+
+.window-title {
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  white-space: nowrap;
+  min-width: 0;
+}
+
+.mqtt-indicator {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--accent-green);
+  background: rgba(0, 179, 60, 0.12);
+  padding: 2px 6px;
+  border-radius: 12px;
+  box-shadow: inset 1px 1px 3px rgba(0, 0, 0, 0.08);
+}
+
+.status-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--accent-green);
+  box-shadow: 0 0 6px var(--accent-green);
+  animation: pulse 2s infinite ease-in-out;
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.4; transform: scale(0.85); }
+}
+
+.window-controls {
+  display: flex;
+  gap: 6px;
+}
+
+.win-btn {
+  width: 24px;
+  height: 24px;
+  flex-shrink: 0;
+  border-radius: 50%;
+  border: none;
+  outline: none;
+  background: var(--bg);
+  color: var(--text-muted);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 11px;
+  box-shadow: 
+    -3px -3px 6px var(--shadow-light),
+    3px 3px 6px var(--shadow-dark);
+  transition: all 0.2s ease;
+}
+
+.win-btn:active {
+  box-shadow: 
+    inset -2px -2px 4px var(--shadow-light),
+    inset 2px 2px 4px var(--shadow-dark);
+}
+
+.win-btn.close:hover {
+  color: var(--accent-red);
+}
+
+/* Quick Preset Scenes */
+.scenes-container {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.scene-chip {
+  flex: 1;
+  padding: 8px 6px;
+  font-size: 12px;
+  font-weight: 500;
+  text-align: center;
+  border-radius: 12px;
+  cursor: pointer;
+  border: none;
+  background: var(--bg);
+  color: var(--text);
+  box-shadow: 
+    -4px -4px 8px var(--shadow-light),
+    4px 4px 8px var(--shadow-dark);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.scene-chip i {
+  font-size: 13px;
+}
+
+.scene-chip.active {
+  color: #007f2b;
+  box-shadow: 
+    inset 3px 3px 6px var(--shadow-dark-deep),
+    inset -3px -3px 6px var(--shadow-light);
+  font-weight: 600;
+}
+
+/* Core Neumorphic Switch Container - Exact style from reference */
+.switch-holder {
+  display: flex;
+  padding: 10px 14px;
+  border-radius: var(--card-radius);
+  box-shadow: 
+    -8px -8px 15px rgba(255, 255, 255, 0.7),
+    10px 10px 10px rgba(0, 0, 0, 0.2),
+    inset 8px 8px 15px rgba(255, 255, 255, 0.7),
+    inset 10px 10px 10px rgba(0, 0, 0, 0.2);
+  justify-content: space-between;
+  align-items: center;
+  transition: all 0.25s ease;
+  background: var(--bg);
+}
+
+.switch-holder.expanded {
+  flex-direction: column;
+  align-items: stretch;
+  gap: 12px;
+}
+
+.switch-top-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  width: 100%;
+}
+
+.switch-label {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-size: 14px;
+  font-weight: 500;
+}
+
+.icon-box {
+  width: 32px;
+  height: 32px;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 16px;
+  box-shadow: 
+    -3px -3px 6px var(--shadow-light),
+    3px 3px 6px var(--shadow-dark);
+  color: #3b414d;
+  transition: all 0.25s;
+}
+
+.switch-holder.is-on .icon-box {
+  color: var(--accent-green);
+  box-shadow: 
+    inset -2px -2px 4px var(--shadow-light),
+    inset 2px 2px 4px var(--shadow-dark);
+}
+
+.switch-info {
+  display: flex;
+  flex-direction: column;
+}
+
+.switch-subtext {
+  font-size: 11px;
+  color: var(--text-muted);
+  font-weight: 400;
+}
+
+/* Switch toggle slider - Reference implementation */
+.switch-toggle {
+  height: 40px;
+}
+
+.switch-toggle input[type="checkbox"] {
+  position: absolute;
+  opacity: 0;
+  z-index: -2;
+  pointer-events: none;
+}
+
+.switch-toggle input[type="checkbox"] + label {
+  position: relative;
+  display: inline-block;
+  width: 96px;
+  height: 38px;
+  border-radius: 20px;
+  margin: 0;
+  cursor: pointer;
+  box-shadow: 
+    inset -8px -8px 15px rgba(255, 255, 255, 0.6),
+    inset 10px 10px 10px rgba(0, 0, 0, 0.25);
+  transition: background-color 0.25s;
+}
+
+.switch-toggle input[type="checkbox"] + label::before {
+  position: absolute;
+  content: "OFF";
+  font-size: 12px;
+  font-weight: 600;
+  text-align: center;
+  line-height: 24px;
+  top: 7px;
+  left: 7px;
+  width: 42px;
+  height: 24px;
+  border-radius: 20px;
+  background-color: #eeeeee;
+  color: #616161;
+  box-shadow: 
+    -3px -3px 5px rgba(255, 255, 255, 0.5),
+    3px 3px 5px rgba(0, 0, 0, 0.25);
+  transition: 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.switch-toggle input[type="checkbox"]:checked + label::before {
+  left: 47px;
+  content: "ON";
+  color: #ffffff;
+  background-color: var(--accent-green);
+  box-shadow: 
+    -3px -3px 5px rgba(255, 255, 255, 0.5),
+    3px 3px 6px var(--accent-green-glow);
+}
+
+/* Recessed Slider for Light Dimming */
+.slider-module {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 4px 6px 6px;
+  width: 100%;
+}
+
+.slider-track-wrap {
+  flex: 1;
+  position: relative;
+  height: 12px;
+  border-radius: 10px;
+  box-shadow: 
+    inset 3px 3px 6px rgba(0, 0, 0, 0.25),
+    inset -3px -3px 6px rgba(255, 255, 255, 0.8);
+  background: #e2e2e2;
+}
+
+.slider-input {
+  -webkit-appearance: none;
+  width: 100%;
+  height: 100%;
+  background: transparent;
+  outline: none;
+  margin: 0;
+  position: absolute;
+  top: 0;
+  left: 0;
+  cursor: pointer;
+}
+
+.slider-input::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: #eeeeee;
+  box-shadow: 
+    -2px -2px 4px var(--shadow-light),
+    2px 2px 5px rgba(0, 0, 0, 0.3);
+  cursor: grab;
+  border: 2px solid #ffffff;
+  transition: transform 0.1s ease;
+}
+
+.slider-input:active::-webkit-slider-thumb {
+  transform: scale(1.15);
+  box-shadow: 0 0 8px var(--accent-green-glow);
+}
+
+.slider-val {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--text-muted);
+  min-width: 34px;
+  text-align: right;
+}
+
+/* Live Telemetry / MQTT Drawer Console */
+.telemetry-drawer {
+  border-radius: 14px;
+  background: #e1e1e1;
+  padding: 10px 14px;
+  box-shadow: 
+    inset 4px 4px 8px rgba(0, 0, 0, 0.18),
+    inset -4px -4px 8px rgba(255, 255, 255, 0.7);
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.telemetry-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+}
+
+.telemetry-log {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
+  color: #333d47;
+  background: rgba(255, 255, 255, 0.4);
+  padding: 6px 8px;
+  border-radius: 8px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.telemetry-log .tag {
+  font-size: 9px;
+  font-weight: 700;
+  padding: 1px 4px;
+  border-radius: 4px;
+  background: #3b414d;
+  color: #fff;
+}
+
+/* Footer Stats */
+.footer-stats {
+  display: flex;
+  justify-content: space-around;
+  padding-top: 4px;
+  font-size: 11px;
+  color: var(--text-muted);
+}
+
+.stat-item {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+/* ---------------------------------------------------------------------------
+   Clickable cards -> detail panel
+   --------------------------------------------------------------------------- */
+.switch-holder[data-detail] {
+  cursor: pointer;
+  position: relative;
+}
+
+/* Green marker on the card whose details are open */
+.switch-holder[data-detail]::before {
+  content: "";
+  position: absolute;
+  left: 5px;
+  top: 30%;
+  width: 3px;
+  height: 40%;
+  border-radius: 3px;
+  background: var(--accent-green);
+  box-shadow: 0 0 6px var(--accent-green-glow);
+  opacity: 0;
+  transition: opacity 0.2s ease;
+}
+
+.switch-holder.is-selected::before {
+  opacity: 1;
+}
+
+/* Detail panel (right column) */
+/* No CSS fade/slide here on purpose: the window width animation (JavaBridge) is
+   what reveals the panel, and animating opacity on this shadow-heavy panel at the
+   same time makes WebView drop frames. */
+.detail-panel {
+  flex: 1;
+  min-width: 0;
+  background: var(--bg);
+  border-radius: 28px;
+  padding: 14px 16px 18px;
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.3);
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  overflow: hidden;
+}
+
+.detail-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 2px 2px 10px;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+  cursor: grab;
+}
+
+.back-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  height: 28px;
+  padding: 0 12px 0 8px;
+  border: none;
+  outline: none;
+  border-radius: 14px;
+  background: var(--bg);
+  color: var(--text-muted);
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  box-shadow:
+    -3px -3px 6px var(--shadow-light),
+    3px 3px 6px var(--shadow-dark);
+  transition: all 0.2s ease;
+}
+
+.back-btn:hover {
+  color: var(--text);
+}
+
+.back-btn:active {
+  box-shadow:
+    inset -2px -2px 4px var(--shadow-light),
+    inset 2px 2px 4px var(--shadow-dark);
+}
+
+.detail-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.3px;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.detail-title i {
+  color: var(--accent-green);
+}
+
+.detail-body {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding: 2px 2px 4px;
+}
+
+.detail-body::-webkit-scrollbar {
+  width: 0;
+}
+
+.detail-body.fade-in {
+  animation: detailFadeIn 0.25s ease;
+}
+
+@keyframes detailFadeIn {
+  from { opacity: 0; transform: translateY(6px); }
+  to { opacity: 1; transform: none; }
+}
+
+.detail-section {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.section-label {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+}
+
+/* Recessed group (list / stats container) */
+.inset-box {
+  border-radius: 14px;
+  background: #e1e1e1;
+  padding: 10px 12px;
+  box-shadow:
+    inset 4px 4px 8px rgba(0, 0, 0, 0.18),
+    inset -4px -4px 8px rgba(255, 255, 255, 0.7);
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+/* Device / status rows */
+.device-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 13px;
+  font-weight: 500;
+}
+
+.device-row .icon-box {
+  width: 28px;
+  height: 28px;
+  font-size: 14px;
+  border-radius: 9px;
+  flex-shrink: 0;
+}
+
+.device-row .switch-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.pill {
+  font-size: 10px;
+  font-weight: 700;
+  padding: 3px 8px;
+  border-radius: 10px;
+  white-space: nowrap;
+  color: var(--text-muted);
+  background: rgba(0, 0, 0, 0.06);
+}
+
+.pill.on {
+  color: var(--accent-green);
+  background: rgba(0, 179, 60, 0.12);
+}
+
+.pill.off {
+  color: var(--accent-red);
+  background: rgba(230, 57, 70, 0.1);
+}
+
+/* Segmented control (neumorphic chips) */
+.seg {
+  display: flex;
+  gap: 8px;
+}
+
+.seg-btn {
+  flex: 1;
+  padding: 7px 4px;
+  font-size: 11px;
+  font-weight: 500;
+  border: none;
+  outline: none;
+  border-radius: 10px;
+  background: var(--bg);
+  color: var(--text);
+  cursor: pointer;
+  box-shadow:
+    -3px -3px 6px var(--shadow-light),
+    3px 3px 6px var(--shadow-dark);
+  transition: all 0.2s ease;
+}
+
+.seg-btn.active {
+  color: #007f2b;
+  font-weight: 600;
+  box-shadow:
+    inset 3px 3px 6px var(--shadow-dark-deep),
+    inset -3px -3px 6px var(--shadow-light);
+}
+
+/* Compact on/off row inside the detail panel */
+.option-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  font-size: 13px;
+}
+
+.option-row .switch-toggle {
+  transform: scale(0.8);
+  transform-origin: right center;
+}
+
+/* Big number + mini bar chart (Smart Plug) */
+.stat-big {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  font-size: 26px;
+  font-weight: 700;
+}
+
+.stat-big small {
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--text-muted);
+}
+
+.bar-chart {
+  display: flex;
+  align-items: flex-end;
+  gap: 6px;
+  height: 60px;
+}
+
+.bar-chart span {
+  flex: 1;
+  border-radius: 4px 4px 2px 2px;
+  background: linear-gradient(to top, var(--accent-green), #5ed98a);
+  box-shadow: 0 2px 4px var(--accent-green-glow);
+}
+
+.bar-labels {
+  display: flex;
+  justify-content: space-between;
+  font-size: 10px;
+  color: var(--text-muted);
+}

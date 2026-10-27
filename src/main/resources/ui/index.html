@@ -1,0 +1,359 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Smart Desk & Office IoT Controller</title>
+
+  <!-- Google Fonts: Roboto (needs internet; falls back to system sans-serif offline) -->
+  <link
+    href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&family=JetBrains+Mono:wght@400;500&display=swap"
+    rel="stylesheet"
+  />
+
+  <!-- Bootstrap Icons (bundled locally) -->
+  <link rel="stylesheet" href="vendor/bootstrap-icons/bootstrap-icons.min.css" />
+
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+
+  <!-- Two columns: main panel (360px) + detail panel (320px). The Java window is
+       360px wide while collapsed and animates to 680px to reveal the detail panel. -->
+  <div class="app-shell">
+  <div class="main-column" id="mainColumn">
+
+  <!-- Floating Desktop Shell (JavaFX transparent, undecorated Stage) -->
+  <div class="widget-window" id="deskWidget">
+
+    <!-- Title Bar & Window Controls: data-drag-region = drag the window from here -->
+    <div class="window-header" data-drag-region>
+      <div class="window-title">
+        <i class="bi bi-grid-1x2-fill"></i>
+        <span>Smart Desk Hub</span>
+        <span class="mqtt-indicator">
+          <span class="status-dot"></span> MQTT
+        </span>
+      </div>
+      <div class="window-controls" data-no-drag>
+        <button class="win-btn" title="Pin to Top" id="pinBtn" onclick="togglePin()">
+          <i class="bi bi-pin-angle"></i>
+        </button>
+        <button class="win-btn" title="Minimize" onclick="desk.minimize()">
+          <i class="bi bi-dash"></i>
+        </button>
+        <button class="win-btn close" title="Close" onclick="desk.close()">
+          <i class="bi bi-x"></i>
+        </button>
+      </div>
+    </div>
+
+    <!-- Quick Preset Scenes -->
+    <div class="scenes-container">
+      <button class="scene-chip active" id="scene-work" onclick="applyScene('work')">
+        <i class="bi bi-briefcase-fill"></i> Work
+      </button>
+      <button class="scene-chip" id="scene-meet" onclick="applyScene('meet')">
+        <i class="bi bi-camera-video-fill"></i> Meet
+      </button>
+      <button class="scene-chip" id="scene-leave" onclick="applyScene('leave')">
+        <i class="bi bi-moon-stars-fill"></i> Leave
+      </button>
+    </div>
+
+    <!-- 1. Original Reference Style: Bluetooth Audio Link -->
+    <div class="switch-holder is-on" id="card-bluetooth" data-detail="bluetooth">
+      <div class="switch-top-row">
+        <div class="switch-label">
+          <div class="icon-box">
+            <i class="bi bi-bluetooth"></i>
+          </div>
+          <div class="switch-info">
+            <span>Bluetooth</span>
+            <span class="switch-subtext" id="bt-status">Audio Engine Connected</span>
+          </div>
+        </div>
+        <div class="switch-toggle">
+          <input type="checkbox" id="bluetooth" checked onchange="handleToggle('bluetooth', this, 'office/desk/soundbar')" />
+          <label for="bluetooth"></label>
+        </div>
+      </div>
+    </div>
+
+    <!-- 2. Ambient Desk Light (With Integrated Neumorphic Recessed Brightness Slider) -->
+    <div class="switch-holder is-on expanded" id="card-light" data-detail="light">
+      <div class="switch-top-row">
+        <div class="switch-label">
+          <div class="icon-box">
+            <i class="bi bi-lightbulb-fill"></i>
+          </div>
+          <div class="switch-info">
+            <span>Desk Halo LED</span>
+            <span class="switch-subtext">Philips Hue ScreenBar</span>
+          </div>
+        </div>
+        <div class="switch-toggle">
+          <input type="checkbox" id="deskLight" checked onchange="handleToggle('light', this, 'office/desk/lights')" />
+          <label for="deskLight"></label>
+        </div>
+      </div>
+      <!-- Recessed Brightness Dimmer -->
+      <div class="slider-module" id="lightBrightnessModule">
+        <i class="bi bi-sun" style="font-size: 13px; color: var(--text-muted);"></i>
+        <div class="slider-track-wrap">
+          <input 
+            type="range" 
+            min="5" 
+            max="100" 
+            value="80" 
+            class="slider-input" 
+            id="lightSlider"
+            oninput="handleSliderChange(this.value)"
+          />
+        </div>
+        <span class="slider-val" id="sliderVal">80%</span>
+      </div>
+    </div>
+
+    <!-- 3. Smart AC Plug / Workstation Rig -->
+    <div class="switch-holder is-on" id="card-rig" data-detail="rig">
+      <div class="switch-top-row">
+        <div class="switch-label">
+          <div class="icon-box">
+            <i class="bi bi-outlet"></i>
+          </div>
+          <div class="switch-info">
+            <span>Smart Plug</span>
+            <span class="switch-subtext">Peripherals & Monitors</span>
+          </div>
+        </div>
+        <div class="switch-toggle">
+          <input type="checkbox" id="smartPlug" checked onchange="handleToggle('rig', this, 'office/desk/plug_main')" />
+          <label for="smartPlug"></label>
+        </div>
+      </div>
+    </div>
+
+    <!-- 4. Privacy Guard (Mic & Cam Hardware Kill-Switch) -->
+    <div class="switch-holder" id="card-privacy" data-detail="privacy">
+      <div class="switch-top-row">
+        <div class="switch-label">
+          <div class="icon-box">
+            <i class="bi bi-shield-lock-fill"></i>
+          </div>
+          <div class="switch-info">
+            <span>Privacy Guard</span>
+            <span class="switch-subtext">Mic & Webcam Shutter</span>
+          </div>
+        </div>
+        <div class="switch-toggle">
+          <input type="checkbox" id="privacySwitch" onchange="handleToggle('privacy', this, 'office/desk/privacy_guard')" />
+          <label for="privacySwitch"></label>
+        </div>
+      </div>
+    </div>
+
+    <!-- Live Telemetry / MQTT Publisher Log -->
+    <div class="telemetry-drawer">
+      <div class="telemetry-header">
+        <span><i class="bi bi-activity"></i> MQTT Bridge Console</span>
+        <span id="pingMs">ping: 14ms</span>
+      </div>
+      <div class="telemetry-log" id="mqttLog">
+        <span class="tag">PUB</span>
+        <span id="mqttPayload">office/desk/status -> {"state":"READY"}</span>
+      </div>
+    </div>
+
+    <!-- Quick Footer Sensors -->
+    <div class="footer-stats">
+      <div class="stat-item" title="Room Temperature">
+        <i class="bi bi-thermometer-half"></i> <span id="tempVal">22.4°C</span>
+      </div>
+      <div class="stat-item" title="Room Humidity">
+        <i class="bi bi-droplet"></i> <span id="humVal">48%</span>
+      </div>
+      <div class="stat-item" title="Desk Power Draw">
+        <i class="bi bi-lightning-charge"></i> <span id="powerDraw">142W</span>
+      </div>
+    </div>
+
+  </div>
+  </div>
+
+  <!-- Right column: detail panel, filled from the <template>s below -->
+  <aside class="detail-column">
+    <div class="detail-panel" id="detailPanel">
+      <div class="detail-header" data-drag-region>
+        <button class="back-btn" data-no-drag onclick="closeDetail()">
+          <i class="bi bi-chevron-left"></i> Geri
+        </button>
+        <div class="detail-title">
+          <i class="bi" id="detailIcon"></i>
+          <span id="detailTitle"></span>
+        </div>
+      </div>
+      <div class="detail-body" id="detailBody"></div>
+    </div>
+  </aside>
+  </div>
+
+  <!-- ===================================================================
+       Detail templates: one <template id="detail-TYPE"> per card with
+       data-detail="TYPE". Interactive elements publish via data attributes:
+         .seg[data-topic] > .seg-btn[data-value]   -> {"value": ...}
+         input[type=checkbox][data-topic]          -> {"state": "ON"/"OFF"}
+         input[type=range][data-topic]             -> {"value": n}
+       =================================================================== -->
+
+  <template id="detail-bluetooth">
+    <div class="detail-section">
+      <span class="section-label">Paired Devices</span>
+      <div class="inset-box">
+        <div class="device-row">
+          <div class="icon-box"><i class="bi bi-speaker-fill"></i></div>
+          <div class="switch-info"><span>Desk Soundbar</span><span class="switch-subtext">A2DP · AAC</span></div>
+          <span class="pill on">ACTIVE</span>
+        </div>
+        <div class="device-row">
+          <div class="icon-box"><i class="bi bi-headphones"></i></div>
+          <div class="switch-info"><span>WH-1000XM5</span><span class="switch-subtext">Battery 64%</span></div>
+          <span class="pill">PAIRED</span>
+        </div>
+        <div class="device-row">
+          <div class="icon-box"><i class="bi bi-mouse2-fill"></i></div>
+          <div class="switch-info"><span>MX Master 3S</span><span class="switch-subtext">Battery 90%</span></div>
+          <span class="pill on">LINKED</span>
+        </div>
+      </div>
+    </div>
+    <div class="detail-section">
+      <span class="section-label">Audio Output</span>
+      <div class="seg" data-topic="office/desk/soundbar/output">
+        <button class="seg-btn active" data-value="soundbar">Soundbar</button>
+        <button class="seg-btn" data-value="headphones">Headphones</button>
+      </div>
+    </div>
+    <div class="detail-section">
+      <span class="section-label">Volume</span>
+      <div class="slider-module">
+        <i class="bi bi-volume-down" style="font-size: 14px; color: var(--text-muted);"></i>
+        <div class="slider-track-wrap">
+          <input type="range" min="0" max="100" value="45" class="slider-input" data-topic="office/desk/soundbar/volume" />
+        </div>
+        <span class="slider-val">45%</span>
+      </div>
+    </div>
+  </template>
+
+  <template id="detail-light">
+    <div class="detail-section">
+      <span class="section-label">Color Temperature</span>
+      <div class="seg" data-topic="office/desk/lights/ct">
+        <button class="seg-btn" data-value="2700">Warm</button>
+        <button class="seg-btn active" data-value="4000">Neutral</button>
+        <button class="seg-btn" data-value="6500">Cool</button>
+      </div>
+    </div>
+    <div class="detail-section">
+      <span class="section-label">Schedule</span>
+      <div class="inset-box">
+        <div class="device-row">
+          <div class="icon-box"><i class="bi bi-sunrise"></i></div>
+          <div class="switch-info"><span>Turn on</span><span class="switch-subtext">Weekdays</span></div>
+          <span class="pill on">08:30</span>
+        </div>
+        <div class="device-row">
+          <div class="icon-box"><i class="bi bi-sunset"></i></div>
+          <div class="switch-info"><span>Turn off</span><span class="switch-subtext">Every day</span></div>
+          <span class="pill">19:00</span>
+        </div>
+      </div>
+    </div>
+    <div class="detail-section">
+      <div class="option-row">
+        <span>Auto-dim at sunset</span>
+        <div class="switch-toggle">
+          <input type="checkbox" id="opt-autodim" checked data-topic="office/desk/lights/autodim" />
+          <label for="opt-autodim"></label>
+        </div>
+      </div>
+    </div>
+  </template>
+
+  <template id="detail-rig">
+    <div class="detail-section">
+      <span class="section-label">Energy Today</span>
+      <div class="inset-box">
+        <div class="stat-big">1.84 <small>kWh · ≈ ₺4.10</small></div>
+        <div class="bar-chart">
+          <span style="height: 35%"></span><span style="height: 55%"></span><span style="height: 80%"></span>
+          <span style="height: 95%"></span><span style="height: 70%"></span><span style="height: 85%"></span>
+          <span style="height: 60%"></span><span style="height: 40%"></span>
+        </div>
+        <div class="bar-labels"><span>09:00</span><span>13:00</span><span>17:00</span></div>
+      </div>
+    </div>
+    <div class="detail-section">
+      <span class="section-label">Auto-off Timer</span>
+      <div class="seg" data-topic="office/desk/plug_main/timer">
+        <button class="seg-btn active" data-value="off">Off</button>
+        <button class="seg-btn" data-value="30">30m</button>
+        <button class="seg-btn" data-value="60">1h</button>
+        <button class="seg-btn" data-value="120">2h</button>
+      </div>
+    </div>
+    <div class="detail-section">
+      <span class="section-label">Outlets</span>
+      <div class="inset-box">
+        <div class="device-row">
+          <div class="icon-box"><i class="bi bi-display"></i></div>
+          <div class="switch-info"><span>Monitors</span><span class="switch-subtext">2 × 27" · 62W</span></div>
+          <span class="pill on">ON</span>
+        </div>
+        <div class="device-row">
+          <div class="icon-box"><i class="bi bi-usb-plug-fill"></i></div>
+          <div class="switch-info"><span>USB-C Dock</span><span class="switch-subtext">Laptop charging · 53W</span></div>
+          <span class="pill on">ON</span>
+        </div>
+      </div>
+    </div>
+  </template>
+
+  <template id="detail-privacy">
+    <div class="detail-section">
+      <span class="section-label">Hardware Status</span>
+      <div class="inset-box">
+        <div class="device-row">
+          <div class="icon-box"><i class="bi bi-mic-fill"></i></div>
+          <div class="switch-info"><span>Microphone</span><span class="switch-subtext">Desk USB mic</span></div>
+          <span class="pill" data-privacy-pill></span>
+        </div>
+        <div class="device-row">
+          <div class="icon-box"><i class="bi bi-webcam-fill"></i></div>
+          <div class="switch-info"><span>Webcam</span><span class="switch-subtext">Shutter</span></div>
+          <span class="pill" data-privacy-pill></span>
+        </div>
+      </div>
+    </div>
+    <div class="detail-section">
+      <div class="option-row">
+        <span>Enable on "Leave" scene</span>
+        <div class="switch-toggle">
+          <input type="checkbox" id="opt-privacy-leave" checked data-topic="office/desk/privacy_guard/on_leave" />
+          <label for="opt-privacy-leave"></label>
+        </div>
+      </div>
+      <div class="option-row">
+        <span>Enable when screen locks</span>
+        <div class="switch-toggle">
+          <input type="checkbox" id="opt-privacy-lock" data-topic="office/desk/privacy_guard/on_lock" />
+          <label for="opt-privacy-lock"></label>
+        </div>
+      </div>
+    </div>
+  </template>
+
+  <script src="app.js"></script>
+</body>
+</html>
