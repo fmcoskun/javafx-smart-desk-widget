@@ -1,0 +1,6 @@
+# GitHub language statistics (Linguist)
+# Third-party icon font, not our code
+src/main/resources/ui/vendor/** linguist-vendored
+# Markup and styles of the WebView UI are not counted, so the bar shows Java + JavaScript
+*.html linguist-detectable=false
+*.css linguist-detectable=false
