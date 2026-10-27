@@ -4,7 +4,7 @@ Neumorphic smart office & IoT desktop widget built with **Java 17**, **JavaFX We
 Java ↔ JavaScript bridge — scenes, dimmable lights, smart plug and privacy guard with MQTT-style telemetry.
 
 <p align="center">
-  <img src="docs/screenshot.png" alt="Smart Desk Hub widget" width="360" />
+  <img src="docs/demo.gif" alt="Smart Desk Hub widget: opening and closing the detail panel" width="510" />
 </p>
 
 ## Features
