@@ -57,4 +57,4 @@ src/main/resources/ui/vendor/bootstrap-icons  Bundled icon font
 
 ## License
 
-MIT
+[MIT](LICENSE) © fmcoskun. Bundled [Bootstrap Icons](https://icons.getbootstrap.com/) are also MIT licensed.
